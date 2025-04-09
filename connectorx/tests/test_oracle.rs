@@ -10,16 +10,20 @@ fn test_types() {
     let dburl = env::var("ORACLE_URL").unwrap();
     let mut source = OracleSource::new(&dburl, 1).unwrap();
     #[derive(Debug, PartialEq)]
-    struct Row(i64, i64, f64, f64, String, String, String, String);
+    struct Row(
+        i64, // test_int NUMBER(7)
+        Option<String>, // test_char CHAR(5)
+        Option<f64>, // test_float FLOAT(53)
+    );
 
-    source.set_queries(&[CXQuery::naked("select * from admin.test_table")]);
+    source.set_queries(&[CXQuery::naked("select * from test_table")]);
     source.fetch_metadata().unwrap();
     let mut partitions = source.partition().unwrap();
     assert!(partitions.len() == 1);
     let mut partition = partitions.remove(0);
     partition.result_rows().expect("run query");
-    assert_eq!(3, partition.nrows());
-    assert_eq!(8, partition.ncols());
+    assert_eq!(5, partition.nrows());
+    assert_eq!(3, partition.ncols());
 
     let mut parser = partition.parser().unwrap();
 
@@ -28,11 +32,6 @@ fn test_types() {
         let (n, is_last) = parser.fetch_next().unwrap();
         for _i in 0..n {
             rows.push(Row(
-                parser.produce().unwrap(),
-                parser.produce().unwrap(),
-                parser.produce().unwrap(),
-                parser.produce().unwrap(),
-                parser.produce().unwrap(),
                 parser.produce().unwrap(),
                 parser.produce().unwrap(),
                 parser.produce().unwrap(),
@@ -47,34 +46,29 @@ fn test_types() {
         vec![
             Row(
                 1,
-                1,
-                1.1,
-                1.1,
-                "varchar1".to_string(),
-                "char1".to_string(),
-                "nvarchar1".to_string(),
-                "nchar1".to_string()
+                Some("str1".to_string()),
+                Some(1.1)
             ),
             Row(
                 2,
-                2,
-                2.2,
-                2.2,
-                "varchar2".to_string(),
-                "char2".to_string(),
-                "nvarchar2".to_string(),
-                "nchar2".to_string()
+                Some("str2".to_string()),
+                Some(2.2)
             ),
             Row(
-                3,
-                3,
-                3.3,
-                3.3,
-                "varchar3".to_string(),
-                "char3".to_string(),
-                "nvarchar3".to_string(),
-                "nchar3".to_string()
-            )
+                2333,
+                None,
+                None,
+            ),
+            Row(
+                4,
+                None,
+                Some(-4.44)
+            ),
+            Row(
+                5,
+                Some("str05".to_string()),
+                None
+            ),
         ],
         rows
     );
